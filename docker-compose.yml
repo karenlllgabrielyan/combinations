@@ -1,0 +1,61 @@
+services:
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
+    ports:
+      - "${DB_PORT_EXPOSE}:${DB_PORT}"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+      - app-network
+
+  nestjs:
+    build:
+      context: ./nest
+      dockerfile: Dockerfile
+    ports:
+      - "${SERVER_PORT}:${SERVER_PORT}"
+    environment:
+      - SERVER_PORT=${SERVER_PORT}
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME}
+      - DATABASE_URL=mysql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}
+    depends_on:
+      - mysql
+    networks:
+      - app-network
+    develop:
+      watch:
+        - path: .
+          target: /app
+          action: sync+restart
+
+  php:
+    build:
+      context: ./php
+      dockerfile: Dockerfile
+    ports:
+      - "${PHP_PORT}:${PHP_PORT}"
+    depends_on:
+      - nestjs
+    environment:
+      - PHP_PORT=${PHP_PORT}
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME}
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  mysql-data:

@@ -13,26 +13,27 @@ export class CombinationsService {
   ): Promise<CombinationsOutCreateDto> {
     const { length } = args;
 
-    // ----------------------- Generate Nested Array of items
     const items = await this.generateItemsArray(args.items);
 
-    // ----------------------- Generate Valid Combinations
     const combinations: string[][] = [];
+    const combination: string[] = [];
 
-    function combine(index: number, combination: string[]) {
-      if (combination.length === length) {
-        combinations.push(combination);
+    function combine(index: number, remaining: number) {
+      if (remaining === 0) {
+        combinations.push(combination.slice());
         return;
       }
 
-      for (let i = index; i < items.length; i++) {
+      for (let i = index; i <= items.length - remaining; i++) {
         for (let j = 0; j < items[i].length; j++) {
-          combine(i + 1, [...combination, items[i][j]]);
+          combination.push(items[i][j]);
+          combine(i + 1, remaining - 1);
+          combination.pop();
         }
       }
     }
 
-    combine(0, []);
+    combine(0, length);
 
     const flatItems = items.flat();
 
@@ -96,5 +97,40 @@ export class CombinationsService {
       console.error('Doing rollback for error:', error.message);
       throw error;
     }
+  }
+
+  // ----------------------------- Generate And Save Combinations Old ------------------------------ //
+  async generateCombinationsOld(
+    args: CombinationsInCreateDto,
+  ): Promise<CombinationsOutCreateDto> {
+    const { length } = args;
+
+    // ----------------------- Generate Nested Array of items
+    const items = await this.generateItemsArray(args.items);
+
+    // ----------------------- Generate Valid Combinations
+    const combinations: string[][] = [];
+
+    function combine(index: number, combination: string[]) {
+      if (combination.length === length) {
+        combinations.push(combination);
+        return;
+      }
+
+      for (let i = index; i < items.length; i++) {
+        for (let j = 0; j < items[i].length; j++) {
+          combine(i + 1, [...combination, items[i][j]]);
+        }
+      }
+    }
+
+    combine(0, []);
+
+    const flatItems = items.flat();
+
+    return await this.saveInDb({
+      combinations,
+      items: flatItems,
+    });
   }
 }

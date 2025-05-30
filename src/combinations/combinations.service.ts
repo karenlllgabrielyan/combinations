@@ -18,22 +18,27 @@ export class CombinationsService {
     const combinations: string[][] = [];
     const combination: string[] = [];
 
-    function combine(index: number, remaining: number) {
+    function* combineGenerator(
+      index: number,
+      remaining: number,
+    ): Generator<string[]> {
       if (remaining === 0) {
-        combinations.push(combination.slice());
+        yield combination.slice();
         return;
       }
 
       for (let i = index; i <= items.length - remaining; i++) {
         for (let j = 0; j < items[i].length; j++) {
           combination.push(items[i][j]);
-          combine(i + 1, remaining - 1);
+          yield* combineGenerator(i + 1, remaining - 1);
           combination.pop();
         }
       }
     }
 
-    combine(0, length);
+    for (const combo of combineGenerator(0, length)) {
+      combinations.push(combo);
+    }
 
     const flatItems = items.flat();
 
